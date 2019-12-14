@@ -90,10 +90,7 @@ void print_debug_info(cl_context context) {
   err = clGetContextInfo(context, CL_CONTEXT_DEVICES, sizeof(cl_device_id) * 16,
                          &devices, &size);
   check_succeeded("Getting context info", err);
-
   elements = size/sizeof(cl_device_id);
-  printf("elem %d\n",elements);
-
   int i;
   for(i = 0; i < elements; i++) {
     cl_char vendor_name[1024] = {0};
@@ -104,7 +101,6 @@ void print_debug_info(cl_context context) {
                            device_name, NULL);
     check_succeeded("Getting device info", err);
 
-    printf("Device %d: %s %s\n", i, vendor_name, device_name);
   }
 }
 

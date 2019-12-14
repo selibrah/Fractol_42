@@ -39,3 +39,4 @@ int write_bmp(const char *filename, int width, int height, char *rgb, t_win *wi)
 int mouse_move(int x, int y, t_win *wi);
 int		mouse_press(int key,int x, int y, t_win *wi);
 int runCL(int width, int height, t_win *wi);
+double map(int n, double start1, double end1, double start2, double end2);

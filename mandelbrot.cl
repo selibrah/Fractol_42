@@ -1,3 +1,4 @@
+
 /*# **************************************************************************** #
 #                                                                              #
 #                                                         :::      ::::::::    #
@@ -14,6 +15,11 @@
 // it effectively as a 2D array
 int index(int x, int y, int width) {
   return 4*width*y + x*4;
+}
+
+double map(int n, double start1, double end1, double start2, double end2)
+{
+    return ((double)((n - start1) / (double)(end1 - start1))) * (end2 - start2) + start2;
 }
 
 // Turn the raw x coordinates [0, 1] into a scaled x coordinate
@@ -42,15 +48,33 @@ __kernel void render(__global char *out,double mx,double my,double Remin,double 
   // _very_ closely
   double x = x_origin;
   double y = y_origin;
-
+  //x_origin = mx;
+  //y_origin = my;
+  //gentype x;
   int iteration = 0;
     
 
   // This can be changed, to be more or less precise
   
   double xtemp;
-  double ytemp; 
+  double ytemp;
+  
+  int p; 
   while(iteration < max_iteration) {
+   /* p = 0;
+    while(p <=0)
+    {
+      xtemp = x*x - y*y;
+      ytemp = 2*x*y;
+      x = xtemp + (p == 0 ? x_origin: 0);
+      y = ytemp + (p == 0 ? y_origin : 0);
+      p++;
+    }
+    xtemp = x*x - y*y;
+    ytemp = 2*x*y;
+    
+    x = xtemp;
+    y = ytemp;*/
     xtemp = x*x - y*y;
     ytemp = 2*x*y;
     x = xtemp + x_origin;
@@ -67,9 +91,10 @@ __kernel void render(__global char *out,double mx,double my,double Remin,double 
     out[idx + 2] = 0;
     out[idx + 3] = 0;
   } else {
+    iteration =map(iteration, 0, max_iteration, 0, 255);
     // This coordinate did escape, so color based on quickly it escaped
-    out[idx] = (iteration)*4;
-    out[idx + 1] = (iteration)*3;
+    out[idx] = (iteration)*3;
+    out[idx + 1] = (iteration)*5;
     out[idx + 2] = iteration*2;
     out[idx + 3] = 0;
   }

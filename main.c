@@ -16,6 +16,7 @@
 
 #include <OpenCL/OpenCL.h>
 
+
 #include "bmp.h"
 #include "cl_helper.h"
 
@@ -47,7 +48,7 @@ int runCL(int width, int height, t_win *wi)
       printf("No compute devices found\n");
       return -1;
     }
-    print_debug_info(context);
+    //print_debug_info(context);
 
     err = clGetContextInfo(context, CL_CONTEXT_DEVICES, sizeof(cl_device_id) * 16,
                            &devices, NULL);
@@ -71,7 +72,6 @@ int runCL(int width, int height, t_win *wi)
 
   // Now setup the arguments to our kernel
   // In our case, we just need to give it a pointer to the image
-  int mx = wi->mx;
 
   err = clSetKernelArg(kernel, 0, sizeof(cl_mem), &image);
   err |= clSetKernelArg(kernel, 1, sizeof(double), &wi->mx);
@@ -91,7 +91,6 @@ int runCL(int width, int height, t_win *wi)
   // Assuming that num_devices divides width and height evenly
 
   size_t device_work_size[2] = {width, height};
-  size_t local_work_size = 25;
   
   err = clEnqueueNDRangeKernel(cmd_queue, kernel, 2, NULL,
                                  device_work_size, NULL, 0, NULL, NULL);
@@ -108,7 +107,47 @@ int runCL(int width, int height, t_win *wi)
   // Now write the file
   // wi->rgb = host_image;
   //write_bmp("output.bmp", width, height, host_image,wi);
-  mlx_put_image_to_window(wi->mlx_ptr, wi->win_ptr, wi->img_ptr, 0, 0);
+mlx_put_image_to_window(wi->mlx_ptr, wi->win_ptr, wi->img_ptr, 0, 0);
+//  // printf("%d \n",wi->line[0]);
+//  int oh = 0;
+//  int cl = 0;
+//  int cli = 0;
+//  char dd = 'l';
+//  mlx_clear_window(wi->mlx_ptr, wi->win_ptr);
+//  while(cl < 1100)
+//  {
+//    cli = 0;
+//     while(cli < 1100)
+//     {
+//       oh = cli * 4 + cl * width *4;
+      
+//       // if(wi->line[oh+2] == 255)
+//       //     mlx_string_put(wi->mlx_ptr, wi->win_ptr,cli,cl,(wi->line[oh]<<8 )+ (wi->line[oh+1]<<16) + (wi->line[oh+2]),"*");
+//       // else
+//       //     mlx_string_put(wi->mlx_ptr, wi->win_ptr,cli,cl,(wi->line[oh]<<8 )+ (wi->line[oh+1]<<16) + (wi->line[oh+2]),&dd);
+//       // cli+=10;
+//       // oh = cli * 4 + cl * width *4;
+//       mlx_string_put(wi->mlx_ptr, wi->win_ptr,cli,cl,(wi->line[oh]<<8 )+ (wi->line[oh+1]<<16) + (wi->line[oh+2]),"1");
+//        cli+=11;
+//       oh = cli * 4 + cl * width *4;
+//       mlx_string_put(wi->mlx_ptr, wi->win_ptr,cli,cl,(wi->line[oh]<<8 )+ (wi->line[oh+1]<<16) + (wi->line[oh+2]),"3");
+//       cli+=11;
+//       oh = cli * 4 + cl * width *4;
+//       mlx_string_put(wi->mlx_ptr, wi->win_ptr,cli,cl,(wi->line[oh]<<8 )+ (wi->line[oh+1]<<16) + (wi->line[oh+2]),"3");
+//       cli+=11;
+//       oh = cli * 4 + cl * width *4;
+//       mlx_string_put(wi->mlx_ptr, wi->win_ptr,cli,cl,(wi->line[oh]<<8 )+ (wi->line[oh+1]<<16) + (wi->line[oh+2]),"7");
+//       cli+=11;
+//       // oh = cli * 4 + cl * width *4;
+//       // mlx_string_put(wi->mlx_ptr, wi->win_ptr,cli,cl,(wi->line[oh]<<8 )+ (wi->line[oh+1]<<16) + (wi->line[oh+2]),"t");
+//       // cli+=10;
+//       // oh = cli * 4 + cl * width *4;
+//       // mlx_string_put(wi->mlx_ptr, wi->win_ptr,cli,cl,(wi->line[oh]<<8 )+ (wi->line[oh+1]<<16) + (wi->line[oh+2]),"e");
+//       // cli+=10;
+      
+//     }
+//     cl+=20;
+//  }
 
   // Release OpenCL objects
   clReleaseMemObject(image);
