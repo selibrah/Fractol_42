@@ -6,179 +6,119 @@
 /*   By: selibrah <marvin@42.fr>                    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2019/12/10 11:05:08 by selibrah          #+#    #+#             */
-/*   Updated: 2019/12/10 11:05:14 by selibrah         ###   ########.fr       */
+/*   Updated: 2019/12/29 10:27:00 by selibrah         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
-
-#include <stdio.h>
-#include <stdlib.h>
-
-#include <OpenCL/OpenCL.h>
-
-
 #include "bmp.h"
-#include "cl_helper.h"
 
-int runCL(int width, int height, t_win *wi)
+void cons(t_win *wi)
 {
-  static int init = 0;
-  static cl_kernel kernel;
+	wi->inpt[0] = wi->mx;
+	wi->inpt[1] = wi->my;
+	wi->inpt[2] = wi->r;
+	wi->inpt[3] = wi->g;
+	wi->inpt[4] = wi->b;
+	wi->inpt[5] = wi->jl;
+	wi->inpt[6] = wi->Remin;
+	wi->inpt[7] = wi->Immin;
+	wi->inpt[8] = wi->Remax;
+	wi->inpt[9] = wi->Immax;
+	wi->inpt[10] = wi->key;
+	wi->inpt[11] = wi->p;
+	wi->inpt[12] = wi->max_iteration;
+}
+void opnclinit(t_win *wi)
+{
+	(wi)->l.err = 0;
+	(wi)->l.ndvs = 0;
+	(wi)->l.fl = "mandelbrot.cl";
+	(wi)->l.rtsz = 0;
+	(wi)->l.bfsz = sizeof(char) * wi->winx * wi->winy * 4;
+	
+	(wi)->l.cxt = create_context(&(wi)->l.ndvs);
+	clGetContextInfo((wi)->l.cxt, CL_CONTEXT_DEVICES, \
+            sizeof(cl_device_id), &(wi)->l.dvs, NULL);
+  	wi->device_work_size[0] = wi->winx; 
+  	wi->device_work_size[1] = wi->winy;
+}
 
-  static cl_command_queue cmd_queue;
-  static cl_context context;
-
-  static cl_int err = 0;
-  static cl_uint num_devices = 0;
-  static cl_device_id devices[16];
-  int bytesPerLine;
-
-  size_t returned_size = 0;
-
-  // Multiply by 3 here, since we need red, green and blue for each pixel
-  static size_t buffer_size;
-
-  cl_mem image;
-  if (init == 0)
-  {
-    buffer_size = sizeof(char) * width * height * 4;
-    context = create_context(&num_devices);
-    if (num_devices == 0)
-    {
-      printf("No compute devices found\n");
-      return -1;
-    }
-    //print_debug_info(context);
-
-    err = clGetContextInfo(context, CL_CONTEXT_DEVICES, sizeof(cl_device_id) * 16,
-                           &devices, NULL);
-    check_succeeded("Getting context info", err);
-    init = 1;
-  }
-
-  
-    cmd_queue = clCreateCommandQueue(context, devices[0], 0, &err);
-    check_succeeded("Creating command queue", err);
-
-
-  // Mark this write only, since the kernel does not have to read the image it
-  // is writing. I am not sure if this has any performance benefit.
-  image = clCreateBuffer(context, CL_MEM_WRITE_ONLY, buffer_size, NULL, &err);
-  check_succeeded("Creating buffer", err);
-
-  // Load the program source from disk
-  const char *filename = "mandelbrot.cl";
-  kernel = load_kernel_from_file(context, filename);
-
-  // Now setup the arguments to our kernel
-  // In our case, we just need to give it a pointer to the image
-
-  err = clSetKernelArg(kernel, 0, sizeof(cl_mem), &image);
-  err |= clSetKernelArg(kernel, 1, sizeof(double), &wi->mx);
-  err |= clSetKernelArg(kernel, 2, sizeof(double), &wi->my);
-  err |= clSetKernelArg(kernel, 3, sizeof(double), &wi->Remin);
-  err |= clSetKernelArg(kernel, 4, sizeof(double), &wi->Immin);
-  err |= clSetKernelArg(kernel, 5, sizeof(double), &wi->Remax);
-  err |= clSetKernelArg(kernel, 6, sizeof(double), &wi->Immax);
-  err |= clSetKernelArg(kernel, 7, sizeof(int), &wi->max_iteration);
-  check_succeeded("Setting kernel arg", err);
-
-  // Run the calculation by enqueuing it and forcing the
-  // command queue to complete the task
-  // To support multiple compute devices, need to split this up
-  // among all of them. Easiest way to split up is block alloc.
-  //
-  // Assuming that num_devices divides width and height evenly
-
-  size_t device_work_size[2] = {width, height};
-  
-  err = clEnqueueNDRangeKernel(cmd_queue, kernel, 2, NULL,
-                                 device_work_size, NULL, 0, NULL, NULL);
-  check_succeeded("Running kernel", err);
-
-    // Non-blocking read, so we can continue queuing up more kernels
-  err = clEnqueueReadBuffer(cmd_queue, image, CL_FALSE, 0,
-                              buffer_size,
-                              wi->line, 0, NULL, NULL);
-  check_succeeded("Reading buffer", err);
-  clFinish(cmd_queue);
- 
-
-  // Now write the file
-  // wi->rgb = host_image;
-  //write_bmp("output.bmp", width, height, host_image,wi);
-mlx_put_image_to_window(wi->mlx_ptr, wi->win_ptr, wi->img_ptr, 0, 0);
-//  // printf("%d \n",wi->line[0]);
-//  int oh = 0;
-//  int cl = 0;
-//  int cli = 0;
-//  char dd = 'l';
-//  mlx_clear_window(wi->mlx_ptr, wi->win_ptr);
-//  while(cl < 1100)
-//  {
-//    cli = 0;
-//     while(cli < 1100)
-//     {
-//       oh = cli * 4 + cl * width *4;
-      
-//       // if(wi->line[oh+2] == 255)
-//       //     mlx_string_put(wi->mlx_ptr, wi->win_ptr,cli,cl,(wi->line[oh]<<8 )+ (wi->line[oh+1]<<16) + (wi->line[oh+2]),"*");
-//       // else
-//       //     mlx_string_put(wi->mlx_ptr, wi->win_ptr,cli,cl,(wi->line[oh]<<8 )+ (wi->line[oh+1]<<16) + (wi->line[oh+2]),&dd);
-//       // cli+=10;
-//       // oh = cli * 4 + cl * width *4;
-//       mlx_string_put(wi->mlx_ptr, wi->win_ptr,cli,cl,(wi->line[oh]<<8 )+ (wi->line[oh+1]<<16) + (wi->line[oh+2]),"1");
-//        cli+=11;
-//       oh = cli * 4 + cl * width *4;
-//       mlx_string_put(wi->mlx_ptr, wi->win_ptr,cli,cl,(wi->line[oh]<<8 )+ (wi->line[oh+1]<<16) + (wi->line[oh+2]),"3");
-//       cli+=11;
-//       oh = cli * 4 + cl * width *4;
-//       mlx_string_put(wi->mlx_ptr, wi->win_ptr,cli,cl,(wi->line[oh]<<8 )+ (wi->line[oh+1]<<16) + (wi->line[oh+2]),"3");
-//       cli+=11;
-//       oh = cli * 4 + cl * width *4;
-//       mlx_string_put(wi->mlx_ptr, wi->win_ptr,cli,cl,(wi->line[oh]<<8 )+ (wi->line[oh+1]<<16) + (wi->line[oh+2]),"7");
-//       cli+=11;
-//       // oh = cli * 4 + cl * width *4;
-//       // mlx_string_put(wi->mlx_ptr, wi->win_ptr,cli,cl,(wi->line[oh]<<8 )+ (wi->line[oh+1]<<16) + (wi->line[oh+2]),"t");
-//       // cli+=10;
-//       // oh = cli * 4 + cl * width *4;
-//       // mlx_string_put(wi->mlx_ptr, wi->win_ptr,cli,cl,(wi->line[oh]<<8 )+ (wi->line[oh+1]<<16) + (wi->line[oh+2]),"e");
-//       // cli+=10;
-      
-//     }
-//     cl+=20;
-//  }
-
-  // Release OpenCL objects
-  clReleaseMemObject(image);
-  clReleaseCommandQueue(cmd_queue);
-  clReleaseContext(context);
-
-  return CL_SUCCESS;
+int runCL(t_win *wi)
+{
+	wi->inpt = (double *) malloc(13 * sizeof(double));
+	(wi)->l.kl = load_kernel_from_file(wi,(wi)->l.cxt, (wi)->l.fl);
+	(wi)->l.cmdqu = clCreateCommandQueue((wi)->l.cxt, \
+  (wi)->l.dvs, 0, &(wi)->l.err);
+	cons(wi);
+	(wi)->l.img = clCreateBuffer((wi)->l.cxt, CL_MEM_WRITE_ONLY,\
+   (wi)->l.bfsz, NULL, &(wi)->l.err);
+	(wi)->l.inpts = clCreateBuffer((wi)->l.cxt, CL_MEM_READ_WRITE,\
+   sizeof(double) * 14, NULL, &(wi)->l.err);
+	clEnqueueWriteBuffer((wi)->l.cmdqu,
+			(wi)->l.inpts, CL_FALSE, 0,
+			sizeof(cl_double) * 13, wi->inpt, 0, NULL, NULL);
+	clSetKernelArg((wi)->l.kl, 0, sizeof(cl_mem), &(wi)->l.img);
+	clSetKernelArg((wi)->l.kl, 1, sizeof(cl_mem), &(wi)->l.inpts);
+	clEnqueueNDRangeKernel((wi)->l.cmdqu, (wi)->l.kl, 2, NULL,\
+			wi->device_work_size, NULL, 0, NULL,NULL);
+	clFinish((wi)->l.cmdqu);
+	clEnqueueReadBuffer((wi)->l.cmdqu, (wi)->l.img, CL_TRUE, 0,\
+	(wi)->l.bfsz, wi->line, 0, NULL, NULL);
+	clReleaseKernel((wi)->l.kl);
+	clReleaseProgram((wi)->l.program);
+	clReleaseMemObject((wi)->l.img);
+	clReleaseMemObject((wi)->l.inpts);
+	clReleaseCommandQueue((wi)->l.cmdqu);
+	mlx_put_image_to_window(wi->mlx_ptr, wi->win_ptr, wi->img_ptr, 434, 181);
+	free(wi->inpt);
+	return CL_SUCCESS;
+}
+void init(t_win *wi)
+{
+	wi->winx = 820;
+	wi->winy = 608;
+	wi->key = 1;
+	wi->mx = 0;
+	wi->my = 0;
+	wi->Remax = 2.69736842;
+	wi->Remin = -2.69736842;
+	wi->Immax = 2;
+	wi->Immin = -2;
+	wi->max_iteration = 50;
+	wi->r = 10;
+	wi->g = 10;
+	wi->b = 10;
+	wi->al = 0;
+	wi->h = 0;
+	wi->p = 2;
+	wi->et = 1700;
+	wi->het = 1275;
 }
 
 int main(int argc, const char *argv[])
 {
-  t_win wi;
+	t_win wi;
 
-  wi.winx = 1000;
-  wi.winy = 1000;
-  wi.mlx_ptr = mlx_init();
-  wi.win_ptr = mlx_new_window(wi.mlx_ptr, wi.winx, wi.winy, "Best Fractol Ever");
-  wi.img_ptr = mlx_new_image(wi.mlx_ptr, wi.winx, wi.winy);
-  wi.mx = 0;
-  wi.my = 0;
-  wi.Remax = 2;
-  wi.Remin = -2;
-  wi.Immax = 2;
-  wi.Immin = -2;
-  wi.max_iteration = 1000;
-
-  wi.line = mlx_get_data_addr(wi.img_ptr, &wi.bpp, &wi.size_line, &wi.endian);
-  runCL(1000, 1000, &wi);
-  mlx_hook(wi.win_ptr, 6, 0, mouse_move, &wi);
-  mlx_hook(wi.win_ptr, 4, 0, mouse_press, &wi);
-  mlx_loop(wi.mlx_ptr);
-
-  return 0;
+	wi.jl = 0;
+	wi.mlx_ptr = mlx_init();
+	wi.win_ptr = mlx_new_window(wi.mlx_ptr, 1700, 1275, "Best Fractol Ever");
+	wi.img_ptr2 = mlx_new_image(wi.mlx_ptr, 1700, 1275);
+	init(&wi);
+	wi.imgstr = mlx_png_file_to_image(wi.mlx_ptr, "ofah.png", &wi.et, &wi.het);
+	mlx_put_image_to_window(wi.mlx_ptr, wi.win_ptr, wi.imgstr, 0, 0);
+	wi.img_ptr = mlx_new_image(wi.mlx_ptr, wi.winx, wi.winy);
+	wi.line = mlx_get_data_addr(wi.img_ptr, &wi.bpp, &wi.size_line, &wi.endian);
+	opnclinit(&wi);
+	runCL(&wi);
+	wi.img_ptr3 = mlx_new_image(wi.mlx_ptr, 1700, 1275);
+	wi.img2str = mlx_png_file_to_image(wi.mlx_ptr, "lt.png", &wi.et, &wi.het);
+	wi.img_ptr4 = mlx_new_image(wi.mlx_ptr, 1700, 1275);
+	wi.img3str = mlx_png_file_to_image(wi.mlx_ptr, "lks.png", &wi.et, &wi.het);
+	wi.img_ptr5 = mlx_new_image(wi.mlx_ptr, 50, 50);
+	wi.img4str = mlx_png_file_to_image(wi.mlx_ptr, "al.png", &wi.et, &wi.het);
+	mlx_hook(wi.win_ptr, 6, 0, mouse_move, &wi);
+	mlx_hook(wi.win_ptr, 4, 0, mouse_press, &wi);
+	mlx_hook(wi.win_ptr, 2, 0, key_press, &wi);
+	mlx_loop(wi.mlx_ptr);
+	return 0;
 }

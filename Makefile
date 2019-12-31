@@ -12,8 +12,8 @@
 
 C = gcc
 CFLAGS =
-MLX_PATH = /usr/local/
-OPENCL = -framework OpenCL -lmlx  -L  $(MLX_PATH)lib/ -I $(MLX_PATH)include -framework OpenGL -framework AppKit
+MLX_PATH = mlx
+OPENCL = -framework OpenCL -lmlx  -L  $(MLX_PATH) -I $(MLX_PATH)include -framework OpenGL -framework AppKit -lz
 
 all: mandelbrot
 
