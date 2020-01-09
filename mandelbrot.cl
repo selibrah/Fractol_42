@@ -21,14 +21,14 @@ double map(int n, double start1, double end1, double start2, double end2)
     return ((double)((n - start1) / (double)(end1 - start1))) * (end2 - start2) + start2;
 }
 
-double mapX(double x, double Remin, double Remax)
+double mapX(double x, double remin, double remax)
 {
-    return x * (Remax - Remin) + Remin;
+    return x * (remax - remin) + remin;
 }
 
-double mapY(double y, double Immin, double Immax)
+double mapY(double y, double immin, double immax)
 {
-    return y * (Immax - Immin) + Immin;
+    return y * (immax - immin) + immin;
 }
 
 double multipx(double x, double y, double x1, double y1)
@@ -50,7 +50,7 @@ __kernel void render(__global char *out, __global double *inputs)
     double y_origin = (double)mapY((double)y_dim / height, inputs[7], inputs[9]);
     double x = x_origin;
     double y = y_origin;
-   if (inputs[10] == 8 || inputs[10] == 9)
+   if (inputs[10] == 7)
    {
         x_origin = inputs[0];
         y_origin = inputs[1];
@@ -63,45 +63,30 @@ __kernel void render(__global char *out, __global double *inputs)
     double teta = 0;
     double r = 0;
     int p = 0;
-    
-    
     while (iteration < inputs[12])
     {
         
-        if (inputs[10] == 5 || inputs[10] == 4 || inputs[10] == 7)
-        {
-            if (inputs[10] == 4)
-            {
-                x = x >= 0 ? x : -x;
-                y = y >= 0 ? y : -y;
-            }
-           r = pow(x * x + y * y, inputs[11] / 2.0);
-            if (inputs[10] == 7)
-                teta = atan2(x, y);
-            else
-                teta = atan2(y, x);
-            x = r * cos(inputs[11] * teta) + x_origin;
-            y = r * sin(inputs[11] * teta) + y_origin;
-        }
-        else if (inputs[10] == 1 || inputs[10] == 6 || inputs[10] == 8 || inputs[10] == 9)
+        if (inputs[10] == 1 || inputs[10] == 6 || inputs[10] == 5 || inputs[10] == 7 || inputs[10] == 4 || inputs[10] == 8)
         {
             if (inputs[10] == 6)
             {
                 x = x >= 0 ? x : -x;
                 y = y >= 0 ? y : -y;
+                x1 = x;
+                y1 = y;
             }
             p = 0;
-            while(p <= inputs[11])
+            while(p <= inputs[11] + (inputs[10] == 8 || inputs[10] == 4) ? 1 : 0)
             {
                 xtemp = multipx(x, y, x1, y1);
                 ytemp = multipy(x, y, x1, y1);
                 x1 = xtemp;
-                y1 = ytemp;     
+                y1 = ytemp;
                 p++;
             }
             x1 = xtemp + x_origin;
-            y1 = ytemp + y_origin;
-            y = ytemp + y_origin;
+            y1 = (inputs[10] == 5 || inputs[10] == 8 ? -1 : 1) * ytemp + y_origin;
+            y = (inputs[10] == 5 || inputs[10] == 8 ? -1 : 1) * ytemp + y_origin;
             x = xtemp + x_origin;
         }
         else if (inputs[10] == 2)
@@ -115,12 +100,15 @@ __kernel void render(__global char *out, __global double *inputs)
         }
         else if (inputs[10] == 3)
         {
-            xtemp = (double)(x * x_origin + y * y_origin) / (x_origin * x_origin + y_origin * y_origin);
-            y = (double)(-x * y_origin + y * x_origin) / (x_origin * x_origin + y_origin * y_origin);
-            x = xtemp;
-            //xtemp = cosh(-y) * cos(x);
-            //y = sinh(-y) * sin(x);
-            x = xtemp;
+            xtemp = x_origin * x_origin * x_origin - 3 * x_origin * y_origin * y_origin;
+            y_origin = 3 * x_origin * x_origin * y_origin - y_origin * y_origin * y_origin;
+            x_origin = xtemp;
+            xtemp = x_origin * x_origin * x_origin - 3 * x_origin * y_origin * y_origin;
+            y_origin = 3 * x_origin * x_origin * y_origin - y_origin * y_origin * y_origin;
+            x_origin = xtemp;
+            xtemp = x * x - y * y;
+            y = 2* x * y + y_origin + 1;
+            x = xtemp + x_origin;
         }
         if (x * x + y * y > 4)
             break;
